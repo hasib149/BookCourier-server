@@ -55,6 +55,7 @@ async function run() {
   try {
     const db = client.db("BooksDB");
     const booksCollection = db.collection("books");
+    const customerOrderCollection = db.collection("customer-order");
     // book added
     app.post("/books", async (req, res) => {
       const bookData = req.body;
@@ -74,7 +75,7 @@ async function run() {
       const result = await booksCollection
         .find()
         .sort({ _id: -1 })
-        .limit(5)
+        .limit(6)
         .toArray();
       res.send(result);
     });
@@ -84,6 +85,27 @@ async function run() {
       const result = await booksCollection.findOne({ _id: new ObjectId(id) });
       res.send(result);
     });
+
+    // order-data
+    app.post("/customer-order", async (req, res) => {
+      const orderData = req.body;
+      console.log(orderData);
+      orderData.order_status = "pending";
+      orderData.payment_status = "unpaid";
+      orderData.orderedAt = new Date().toDateString();
+      const result = await customerOrderCollection.insertOne(orderData);
+      res.send(result);
+    });
+
+    // my-order
+    app.get("/my-orders", verifyJWT, async (req, res) => {
+      const result = await customerOrderCollection
+        .find({ email: req.tokenEmail })
+        .sort({ orderedAt: -1 })
+        .toArray();
+      res.send(result);
+    });
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
