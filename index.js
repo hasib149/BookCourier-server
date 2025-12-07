@@ -117,6 +117,19 @@ async function run() {
 
       res.send(result);
     });
+
+    // order-payment-success
+    app.patch("/payment-success/:id", async (req, res) => {
+      const id = new ObjectId(req.params.id);
+
+      const result = await customerOrderCollection.updateOne(
+        { _id: id },
+        { $set: { payment_status: "paid" } }
+      );
+
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
