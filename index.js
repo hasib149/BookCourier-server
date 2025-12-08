@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const admin = require("firebase-admin");
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const port = process.env.PORT || 3000;
 const decoded = Buffer.from(process.env.FB_SERVICE_KEY, "base64").toString(
   "utf-8"
@@ -56,6 +57,7 @@ async function run() {
     const db = client.db("BooksDB");
     const booksCollection = db.collection("books");
     const customerOrderCollection = db.collection("customer-order");
+    const invoices = db.collection("Invoices");
     // book added
     app.post("/books", async (req, res) => {
       const bookData = req.body;
@@ -109,25 +111,67 @@ async function run() {
     // cancel-order
     app.patch("/cancel-order/:id", async (req, res) => {
       const id = new ObjectId(req.params.id);
-
       const result = await customerOrderCollection.updateOne(
         { _id: id },
         { $set: { order_status: "cancelled" } }
       );
-
       res.send(result);
     });
 
-    // order-payment-success
-    app.patch("/payment-success/:id", async (req, res) => {
-      const id = new ObjectId(req.params.id);
+    // payment cheakout system
+    app.post("/create-checkout-session", async (req, res) => {
+      const paymentInfo = req.body;
+      console.log(paymentInfo);
 
-      const result = await customerOrderCollection.updateOne(
-        { _id: id },
-        { $set: { payment_status: "paid" } }
-      );
+      const session = await stripe.checkout.sessions.create({
+        line_items: [
+          {
+            price_data: {
+              currency: "usd",
+              product_data: {
+                name: paymentInfo?.bookname,
+              },
+              unit_amount: paymentInfo?.price * 100,
+            },
+            quantity: paymentInfo?.quantity,
+          },
+        ],
+        customer_email: paymentInfo?.customer?.email,
+        mode: "payment",
+        metadata: {
+          bookId: paymentInfo?.bookId,
+          customer: paymentInfo?.customer.email,
+        },
+        success_url: `${process.env.CLIENT_DOMAIN}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.CLIENT_DOMAIN}/books/${paymentInfo?.bookId}`,
+      });
+      res.send({ url: session.url });
+    });
 
-      res.send(result);
+    // payment-success
+    app.post("/payment-success", async (req, res) => {
+      const { sessionId } = req.body;
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      if (session.payment_status === "paid") {
+        const id = session.metadata.bookId;
+        const query = { _id: new ObjectId(id) };
+        const update = {
+          $set: { payment_status: "paid" },
+        };
+        const result = await customerOrderCollection.updateOne(query, update);
+        return res.send(result);
+        // save order data in db
+        // const orderInfo = {
+        //   bookID: session.metadata.bookId,
+        //   PaymentID: session.payment_intent,
+        //   customer: session.metadata.customer,
+        //   quantity: 1,
+        //   date: new Date().toISOString(),
+        //   Amount: session.amount_total / 100,
+        // };
+        // const result = await invoices.insertOne(orderInfo);
+      }
+      res.send({ success: false });
     });
 
     // Send a ping to confirm a successful connection
