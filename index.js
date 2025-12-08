@@ -141,6 +141,7 @@ async function run() {
         metadata: {
           bookId: paymentInfo?.bookId,
           customer: paymentInfo?.customer.email,
+          name: paymentInfo?.bookname,
         },
         success_url: `${process.env.CLIENT_DOMAIN}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${process.env.CLIENT_DOMAIN}/books/${paymentInfo?.bookId}`,
@@ -150,28 +151,35 @@ async function run() {
 
     // payment-success
     app.post("/payment-success", async (req, res) => {
-      const { sessionId } = req.body;
-      const session = await stripe.checkout.sessions.retrieve(sessionId);
-      if (session.payment_status === "paid") {
-        const id = session.metadata.bookId;
-        const query = { _id: new ObjectId(id) };
-        const update = {
-          $set: { payment_status: "paid" },
-        };
-        const result = await customerOrderCollection.updateOne(query, update);
-        return res.send(result);
-        // save order data in db
-        // const orderInfo = {
-        //   bookID: session.metadata.bookId,
-        //   PaymentID: session.payment_intent,
-        //   customer: session.metadata.customer,
-        //   quantity: 1,
-        //   date: new Date().toISOString(),
-        //   Amount: session.amount_total / 100,
-        // };
-        // const result = await invoices.insertOne(orderInfo);
+      try {
+        const { sessionId } = req.body;
+        const session = await stripe.checkout.sessions.retrieve(sessionId);       
+        if (session.payment_status !== "paid") {
+          return res.send({ success: false, message: "Payment not completed" });
+        }
+        const bookId = session.metadata.bookId;       
+        const query = { _id: new ObjectId(bookId) };
+        const update = { $set: { payment_status: "paid" } };
+        await customerOrderCollection.updateOne(query, update);        
+        const exist = await invoices.findOne({
+          PaymentID: session.payment_intent,
+        });
+        if (!exist) {
+          const orderInfo = {
+            bookID: session.metadata.bookId,
+            PaymentID: session.payment_intent,
+            customer: session.metadata.customer,
+            quantity: 1,
+            date: new Date().toISOString(),
+            Amount: session.amount_total / 100,
+          };
+          await invoices.insertOne(orderInfo);
+        }
+        return res.send({ success: true });
+      } catch (err) {
+        console.error(err);
+        res.status(500).send({ success: false, error: "Server error" });
       }
-      res.send({ success: false });
     });
 
     // Send a ping to confirm a successful connection
