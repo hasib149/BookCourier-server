@@ -209,6 +209,24 @@ async function run() {
       res.send(result);
     });
 
+    // get edited data for one products
+    app.get("/editBooks/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await booksCollection.findOne({ _id: new ObjectId(id) });
+      res.send(result);
+    });
+
+    // edit-book
+    app.put("/book-edit/:id", async (req, res) => {
+      const id = req.params.id;
+      const updatedReview = req.body;
+      const result = await booksCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: updatedReview }
+      );
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
