@@ -58,6 +58,7 @@ async function run() {
     const booksCollection = db.collection("books");
     const customerOrderCollection = db.collection("customer-order");
     const invoicesCoolection = db.collection("Invoices");
+    const userCollection = db.collection("users");
     // book added
     app.post("/books", async (req, res) => {
       const bookData = req.body;
@@ -223,6 +224,36 @@ async function run() {
       const result = await booksCollection.updateOne(
         { _id: new ObjectId(id) },
         { $set: updatedReview }
+      );
+      res.send(result);
+    });
+
+    // liberian all order data
+    app.get("/allOrders/:email", async (req, res) => {
+      const email = req.params.email;
+      const result = await customerOrderCollection
+        .find({ "librarian.email": email })
+        .toArray();
+      res.send(result);
+    });
+
+    //order calcel
+    app.patch("/orders/cancel/:id", async (req, res) => {
+      const id = new ObjectId(req.params.id);
+      const result = await customerOrderCollection.updateOne(
+        { _id: id },
+        { $set: { order_status: "cancelled" } }
+      );
+      res.send(result);
+    });
+
+    // order status cjhange
+    app.put("/orders/status/:id", async (req, res) => {
+      const id = req.params.id;
+      const newStatus = req.body.status;
+      const result = await customerOrderCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { status: newStatus } }
       );
       res.send(result);
     });
