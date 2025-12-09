@@ -253,7 +253,7 @@ async function run() {
       const newStatus = req.body.status;
       const result = await customerOrderCollection.updateOne(
         { _id: new ObjectId(id) },
-        { $set: { status: newStatus } }
+        { $set: { order_status: newStatus } }
       );
       res.send(result);
     });
