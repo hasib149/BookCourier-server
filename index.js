@@ -57,7 +57,7 @@ async function run() {
     const db = client.db("BooksDB");
     const booksCollection = db.collection("books");
     const customerOrderCollection = db.collection("customer-order");
-    const invoices = db.collection("Invoices");
+    const invoicesCoolection = db.collection("Invoices");
     // book added
     app.post("/books", async (req, res) => {
       const bookData = req.body;
@@ -153,15 +153,15 @@ async function run() {
     app.post("/payment-success", async (req, res) => {
       try {
         const { sessionId } = req.body;
-        const session = await stripe.checkout.sessions.retrieve(sessionId);       
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
         if (session.payment_status !== "paid") {
           return res.send({ success: false, message: "Payment not completed" });
         }
-        const bookId = session.metadata.bookId;       
+        const bookId = session.metadata.bookId;
         const query = { _id: new ObjectId(bookId) };
         const update = { $set: { payment_status: "paid" } };
-        await customerOrderCollection.updateOne(query, update);        
-        const exist = await invoices.findOne({
+        await customerOrderCollection.updateOne(query, update);
+        const exist = await invoicesCoolection.findOne({
           PaymentID: session.payment_intent,
         });
         if (!exist) {
@@ -173,13 +173,22 @@ async function run() {
             date: new Date().toISOString(),
             Amount: session.amount_total / 100,
           };
-          await invoices.insertOne(orderInfo);
+          await invoicesCoolection.insertOne(orderInfo);
         }
         return res.send({ success: true });
       } catch (err) {
         console.error(err);
         res.status(500).send({ success: false, error: "Server error" });
       }
+    });
+
+    // get-invoice-data
+    app.get("/invoices/:email", async (req, res) => {
+      const email = req.params.email;
+      const result = await invoicesCoolection
+        .find({ customer: email })
+        .toArray();
+      res.send(result);
     });
 
     // Send a ping to confirm a successful connection
