@@ -69,6 +69,7 @@ async function run() {
     app.get("/books", async (req, res) => {
       const result = await booksCollection
         .find({ status: "published" })
+        .sort({ _id: -1 })
         .toArray();
       res.send(result);
     });
@@ -188,6 +189,23 @@ async function run() {
       const result = await invoicesCoolection
         .find({ customer: email })
         .toArray();
+      res.send(result);
+    });
+    // my-books liberian
+    app.get("/my-books/:email", async (req, res) => {
+      const email = req.params.email;
+      const result = await booksCollection
+        .find({ "Librarian.email": email })
+        .toArray();
+      res.send(result);
+    });
+    // my-books-status-update
+    app.patch("/status-update/:id", async (req, res) => {
+      const id = new ObjectId(req.params.id);
+      const result = await booksCollection.updateOne(
+        { _id: id },
+        { $set: { status: "unpublished" } }
+      );
       res.send(result);
     });
 
