@@ -298,6 +298,25 @@ async function run() {
       res.send(result);
     });
 
+    // make user update--->liberian
+    app.patch("/userRole/:id", async (req, res) => {
+      const id = new ObjectId(req.params.id);
+      const result = await usersCollection.updateOne(
+        { _id: id },
+        { $set: { role: "Librarian" } }
+      );
+      res.send(result);
+    });
+    // make user update--->Admin
+    app.patch("/userRoles/:id", async (req, res) => {
+      const id = new ObjectId(req.params.id);
+      const result = await usersCollection.updateOne(
+        { _id: id },
+        { $set: { role: "Admin" } }
+      );
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
