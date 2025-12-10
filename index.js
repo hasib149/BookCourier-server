@@ -58,7 +58,7 @@ async function run() {
     const booksCollection = db.collection("books");
     const customerOrderCollection = db.collection("customer-order");
     const invoicesCoolection = db.collection("Invoices");
-    const userCollection = db.collection("users");
+    const usersCollection = db.collection("users");
     // book added
     app.post("/books", async (req, res) => {
       const bookData = req.body;
@@ -255,6 +255,47 @@ async function run() {
         { _id: new ObjectId(id) },
         { $set: { order_status: newStatus } }
       );
+      res.send(result);
+    });
+
+    app.post("/user", async (req, res) => {
+      const userData = req.body;
+      userData.created_at = new Date().toISOString();
+      userData.last_loggedIn = new Date().toISOString();
+      userData.role = "customer";
+
+      const query = {
+        email: userData.email,
+      };
+
+      const alreadyExists = await usersCollection.findOne(query);
+      console.log("User Already Exists---> ", !!alreadyExists);
+
+      if (alreadyExists) {
+        console.log("Updating user info......");
+        const result = await usersCollection.updateOne(query, {
+          $set: {
+            last_loggedIn: new Date().toISOString(),
+          },
+        });
+        return res.send(result);
+      }
+
+      console.log("Saving new user info......");
+      const result = await usersCollection.insertOne(userData);
+      res.send(result);
+    });
+
+    // get a user role
+    app.get("/user/role", verifyJWT, async (req, res) => {
+      const result = await usersCollection.findOne({ email: req.tokenEmail });
+      res.send({ role: result?.role });
+    });
+
+    // get all user
+    app.get("/alluser/:email", async (req, res) => {
+      const email = req.params.email;
+      const result = await usersCollection.find({ email }).toArray();
       res.send(result);
     });
 
