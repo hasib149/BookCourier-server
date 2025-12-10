@@ -326,6 +326,25 @@ async function run() {
       res.send(result);
     });
 
+    // admin publish
+    app.patch("/userstatus/:id", async (req, res) => {
+      const id = new ObjectId(req.params.id);
+      const result = await booksCollection.updateOne(
+        { _id: id },
+        { $set: { status: "unpublished" } }
+      );
+      res.send(result);
+    });
+    // admin unpublish
+    app.patch("/userstatusunpublish/:id", async (req, res) => {
+      const id = new ObjectId(req.params.id);
+      const result = await booksCollection.updateOne(
+        { _id: id },
+        { $set: { status: "published" } }
+      );
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
