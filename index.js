@@ -293,8 +293,17 @@ async function run() {
     });
 
     // get all user
-    app.get("/alluser", async (req, res) => {
-      const result = await usersCollection.find().toArray();
+    app.get("/alluser/:email", async (req, res) => {
+      const email = req.params.email;
+      const result = await usersCollection
+        .find({ email: { $ne: email } })
+        .toArray();
+      res.send(result);
+    });
+
+    // all books for admin
+    app.get("/adminbooks", async (req, res) => {
+      const result = await booksCollection.find().sort({ _id: -1 }).toArray();
       res.send(result);
     });
 
