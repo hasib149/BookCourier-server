@@ -59,6 +59,7 @@ async function run() {
     const customerOrderCollection = db.collection("customer-order");
     const invoicesCoolection = db.collection("Invoices");
     const usersCollection = db.collection("users");
+
     // book added
     app.post("/books", async (req, res) => {
       const bookData = req.body;
@@ -66,6 +67,7 @@ async function run() {
       const result = await booksCollection.insertOne(bookData);
       res.send(result);
     });
+
     // get all books from db
     app.get("/books", async (req, res) => {
       const result = await booksCollection
@@ -74,6 +76,7 @@ async function run() {
         .toArray();
       res.send(result);
     });
+
     // get 5  books from db
     app.get("/books-limit", async (req, res) => {
       const result = await booksCollection
@@ -83,6 +86,7 @@ async function run() {
         .toArray();
       res.send(result);
     });
+
     // get one plants
     app.get("/books/:id", async (req, res) => {
       const id = req.params.id;
@@ -192,6 +196,7 @@ async function run() {
         .toArray();
       res.send(result);
     });
+
     // my-books liberian
     app.get("/my-books/:email", async (req, res) => {
       const email = req.params.email;
@@ -200,6 +205,7 @@ async function run() {
         .toArray();
       res.send(result);
     });
+
     // my-books-status-update
     app.patch("/status-update/:id", async (req, res) => {
       const id = new ObjectId(req.params.id);
@@ -343,6 +349,26 @@ async function run() {
         { $set: { status: "published" } }
       );
       res.send(result);
+    });
+
+    // delete book and order
+    app.delete("/booksupdate/:id", async (req, res, next) => {
+      const id = req.params.id;
+
+      const deleteBook = await booksCollection.deleteOne({
+        _id: new ObjectId(id),
+      });
+
+      const deleteOrders = await customerOrderCollection.deleteMany({
+        productId: id,
+      });
+
+      res.send({
+        success: true,
+        message: "Book and related orders deleted",
+        deleteBook,
+        deleteOrders,
+      });
     });
 
     // Send a ping to confirm a successful connection
