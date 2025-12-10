@@ -337,7 +337,7 @@ async function run() {
       const id = new ObjectId(req.params.id);
       const result = await booksCollection.updateOne(
         { _id: id },
-        { $set: { status: "unpublished" } }
+        { $set: { status: "published" } }
       );
       res.send(result);
     });
@@ -346,7 +346,7 @@ async function run() {
       const id = new ObjectId(req.params.id);
       const result = await booksCollection.updateOne(
         { _id: id },
-        { $set: { status: "published" } }
+        { $set: { status: "unpublished" } }
       );
       res.send(result);
     });
@@ -369,6 +369,16 @@ async function run() {
         deleteBook,
         deleteOrders,
       });
+    });
+
+    // search
+    app.get("/search", async (req, res) => {
+      const search = req.query.search || "";
+      const result = await booksCollection
+        .find({ name: { $regex: search, $options: "i" } })
+        .toArray();
+
+      res.send(result);
     });
 
     // Send a ping to confirm a successful connection
