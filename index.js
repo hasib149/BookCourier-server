@@ -293,9 +293,8 @@ async function run() {
     });
 
     // get all user
-    app.get("/alluser/:email", async (req, res) => {
-      const email = req.params.email;
-      const result = await usersCollection.find({ email }).toArray();
+    app.get("/alluser", async (req, res) => {
+      const result = await usersCollection.find().toArray();
       res.send(result);
     });
 
