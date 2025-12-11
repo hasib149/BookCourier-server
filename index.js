@@ -60,6 +60,7 @@ async function run() {
     const invoicesCoolection = db.collection("Invoices");
     const usersCollection = db.collection("users");
     const reviewsCollection = db.collection("review");
+    const wishlistCollection = db.collection("wishlist");
 
     // book added
     app.post("/books", async (req, res) => {
@@ -423,6 +424,59 @@ async function run() {
       const avg =
         reviews.reduce((acc, r) => acc + r.rating, 0) / (reviews.length || 1);
       res.send({ averageRating: avg, totalReviews: reviews.length });
+    });
+
+    // wishlist---->post
+    app.post("/api/wishlist", async (req, res) => {
+      const {
+        userId,
+        bookId,
+        description,
+        quantity,
+        price,
+        category,
+        image,
+        bookname,
+      } = req.body;
+
+      try {
+        // Already exists check
+        const exists = await wishlistCollection.findOne({ userId, bookId });
+        if (exists) {
+          return res.status(400).json({ message: "Book already in wishlist" });
+        }
+
+        const wishlistItem = {
+          userId,
+          bookId,
+          description,
+          quantity,
+          price,
+          category,
+          image,
+          bookname,
+        };
+        await wishlistCollection.insertOne(wishlistItem);
+
+        res
+          .status(200)
+          .json({ message: "Book added to wishlist", wishlistItem });
+      } catch (err) {
+        console.error(err); // <-- log the actual error
+        res.status(500).json({ error: err.message });
+      }
+    });
+    // ---->whislist get
+    app.get("/api/wishlist/:userId", async (req, res) => {
+      const userId = req.params.userId;
+      try {
+        const wishlistItems = await wishlistCollection
+          .find({ userId })
+          .populate("bookId");
+        res.status(200).json(wishlistItems);
+      } catch (err) {
+        res.status(500).json({ error: err.message });
+      }
     });
 
     // Send a ping to confirm a successful connection
