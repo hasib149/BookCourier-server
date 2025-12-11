@@ -59,6 +59,7 @@ async function run() {
     const customerOrderCollection = db.collection("customer-order");
     const invoicesCoolection = db.collection("Invoices");
     const usersCollection = db.collection("users");
+    const reviewsCollection = db.collection("review");
 
     // book added
     app.post("/books", async (req, res) => {
@@ -318,7 +319,7 @@ async function run() {
       const id = new ObjectId(req.params.id);
       const result = await usersCollection.updateOne(
         { _id: id },
-        { $set: { role: "Librarian" } }
+        { $set: { role: "librarian" } }
       );
       res.send(result);
     });
@@ -327,7 +328,7 @@ async function run() {
       const id = new ObjectId(req.params.id);
       const result = await usersCollection.updateOne(
         { _id: id },
-        { $set: { role: "Admin" } }
+        { $set: { role: "admin" } }
       );
       res.send(result);
     });
@@ -389,6 +390,39 @@ async function run() {
         .sort({ price: sort === "asc" ? 1 : -1 })
         .toArray();
       res.send(result);
+    });
+
+    // add review
+    app.post("/reviews", async (req, res) => {
+      const { bookId, userName, rating, review } = req.body;
+      if (!bookId || !rating) {
+        return res.status(400).send({ message: "Missing fields" });
+      }
+      const newReview = {
+        bookId,
+        userName,
+        rating,
+        review,
+        createdAt: new Date(),
+      };
+      const result = await reviewsCollection.insertOne(newReview);
+      res.send(result);
+    });
+
+    // get review
+    app.get("/reviews/:bookId", async (req, res) => {
+      const bookId = req.params.bookId;
+      const reviews = await reviewsCollection.find({ bookId }).toArray();
+      res.send(reviews);
+    });
+
+    // rating
+    app.get("/rating/:bookId", async (req, res) => {
+      const bookId = req.params.bookId;
+      const reviews = await reviewsCollection.find({ bookId }).toArray();
+      const avg =
+        reviews.reduce((acc, r) => acc + r.rating, 0) / (reviews.length || 1);
+      res.send({ averageRating: avg, totalReviews: reviews.length });
     });
 
     // Send a ping to confirm a successful connection
