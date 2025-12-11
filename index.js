@@ -381,6 +381,16 @@ async function run() {
       res.send(result);
     });
 
+    // sort
+    app.get("/sort", async (req, res) => {
+      const sort = req.query.sort;
+      const result = await booksCollection
+        .find()
+        .sort({ price: sort === "asc" ? 1 : -1 })
+        .toArray();
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
