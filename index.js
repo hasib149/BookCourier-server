@@ -63,7 +63,7 @@ async function run() {
     const wishlistCollection = db.collection("wishlist");
 
     // book added
-    app.post("/books", async (req, res) => {
+    app.post("/books", verifyJWT, async (req, res) => {
       const bookData = req.body;
       console.log(bookData);
       const result = await booksCollection.insertOne(bookData);
@@ -97,12 +97,12 @@ async function run() {
     });
 
     // order-data
-    app.post("/customer-order", async (req, res) => {
+    app.post("/customer-order", verifyJWT, async (req, res) => {
       const orderData = req.body;
       console.log(orderData);
       orderData.order_status = "pending";
       orderData.payment_status = "unpaid";
-      orderData.orderedAt = new Date().toDateString();
+      orderData.orderedAt = new Date();
       const result = await customerOrderCollection.insertOne(orderData);
       res.send(result);
     });
@@ -191,25 +191,23 @@ async function run() {
     });
 
     // get-invoice-data
-    app.get("/invoices/:email", async (req, res) => {
-      const email = req.params.email;
+    app.get("/invoices", verifyJWT, async (req, res) => {
       const result = await invoicesCoolection
-        .find({ customer: email })
+        .find({ customer: req.tokenEmail })
         .toArray();
       res.send(result);
     });
 
     // my-books liberian
-    app.get("/my-books/:email", async (req, res) => {
-      const email = req.params.email;
+    app.get("/my-books", verifyJWT, async (req, res) => {
       const result = await booksCollection
-        .find({ "Librarian.email": email })
+        .find({ "Librarian.email": req.tokenEmail })
         .toArray();
       res.send(result);
     });
 
     // my-books-status-update
-    app.patch("/status-update/:id", async (req, res) => {
+    app.patch("/status-update/:id", verifyJWT, async (req, res) => {
       const id = new ObjectId(req.params.id);
       const result = await booksCollection.updateOne(
         { _id: id },
@@ -219,14 +217,14 @@ async function run() {
     });
 
     // get edited data for one products
-    app.get("/editBooks/:id", async (req, res) => {
+    app.get("/editBooks/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
       const result = await booksCollection.findOne({ _id: new ObjectId(id) });
       res.send(result);
     });
 
     // edit-book
-    app.put("/book-edit/:id", async (req, res) => {
+    app.put("/book-edit/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
       const updatedReview = req.body;
       const result = await booksCollection.updateOne(
@@ -237,16 +235,15 @@ async function run() {
     });
 
     // liberian all order data
-    app.get("/allOrders/:email", async (req, res) => {
-      const email = req.params.email;
+    app.get("/allOrders", verifyJWT, async (req, res) => {
       const result = await customerOrderCollection
-        .find({ "librarian.email": email })
+        .find({ "librarian.email": req.tokenEmail })
         .toArray();
       res.send(result);
     });
 
     //order calcel
-    app.patch("/orders/cancel/:id", async (req, res) => {
+    app.patch("/orders/cancel/:id", verifyJWT, async (req, res) => {
       const id = new ObjectId(req.params.id);
       const result = await customerOrderCollection.updateOne(
         { _id: id },
@@ -256,7 +253,7 @@ async function run() {
     });
 
     // order status cjhange
-    app.put("/orders/status/:id", async (req, res) => {
+    app.put("/orders/status/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
       const newStatus = req.body.status;
       const result = await customerOrderCollection.updateOne(
@@ -301,22 +298,21 @@ async function run() {
     });
 
     // get all user
-    app.get("/alluser/:email", async (req, res) => {
-      const email = req.params.email;
+    app.get("/alluser", verifyJWT, async (req, res) => {
       const result = await usersCollection
-        .find({ email: { $ne: email } })
+        .find({ email: { $ne: req.tokenEmail } })
         .toArray();
       res.send(result);
     });
 
     // all books for admin
-    app.get("/adminbooks", async (req, res) => {
+    app.get("/adminbooks", verifyJWT, async (req, res) => {
       const result = await booksCollection.find().sort({ _id: -1 }).toArray();
       res.send(result);
     });
 
     // make user update--->liberian
-    app.patch("/userRole/:id", async (req, res) => {
+    app.patch("/userRole/:id", verifyJWT, async (req, res) => {
       const id = new ObjectId(req.params.id);
       const result = await usersCollection.updateOne(
         { _id: id },
@@ -325,7 +321,7 @@ async function run() {
       res.send(result);
     });
     // make user update--->Admin
-    app.patch("/userRoles/:id", async (req, res) => {
+    app.patch("/userRoles/:id", verifyJWT, async (req, res) => {
       const id = new ObjectId(req.params.id);
       const result = await usersCollection.updateOne(
         { _id: id },
@@ -335,7 +331,7 @@ async function run() {
     });
 
     // admin publish
-    app.patch("/userstatus/:id", async (req, res) => {
+    app.patch("/userstatus/:id", verifyJWT, async (req, res) => {
       const id = new ObjectId(req.params.id);
       const result = await booksCollection.updateOne(
         { _id: id },
@@ -344,7 +340,7 @@ async function run() {
       res.send(result);
     });
     // admin unpublish
-    app.patch("/userstatusunpublish/:id", async (req, res) => {
+    app.patch("/userstatusunpublish/:id", verifyJWT, async (req, res) => {
       const id = new ObjectId(req.params.id);
       const result = await booksCollection.updateOne(
         { _id: id },
@@ -354,7 +350,7 @@ async function run() {
     });
 
     // delete book and order
-    app.delete("/booksupdate/:id", async (req, res, next) => {
+    app.delete("/booksupdate/:id", verifyJWT, async (req, res, next) => {
       const id = req.params.id;
 
       const deleteBook = await booksCollection.deleteOne({
@@ -471,12 +467,12 @@ async function run() {
       }
     });
     // ---->whislist get
-    app.get("/api/wishlist/:useremail", async (req, res) => {
-      const useremail = req.params.useremail;
+    app.get("/api/wishlist", verifyJWT, async (req, res) => {
       try {
         const wishlistItems = await wishlistCollection
-          .find({ useremail })
+          .find({ useremail: req.tokenEmail })
           .toArray();
+
         res.status(200).json(wishlistItems);
       } catch (err) {
         res.status(500).json({ error: err.message });
