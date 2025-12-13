@@ -70,13 +70,32 @@ async function run() {
       res.send(result);
     });
 
-    // get all books from db
     app.get("/books", async (req, res) => {
-      const result = await booksCollection
-        .find({ status: "published" })
-        .sort({ _id: -1 })
-        .toArray();
-      res.send(result);
+      try {
+        const { search = "", sort, status = "published" } = req.query;
+        //  filter object
+        let query = {};
+        if (status) {
+          query.status = status;
+        }
+        if (search) {
+          query.name = { $regex: search, $options: "i" };
+        }
+        //  sort object
+        let sortQuery = { _id: -1 };
+        if (sort === "asc") {
+          sortQuery = { price: 1 };
+        } else if (sort === "desc") {
+          sortQuery = { price: -1 };
+        }
+        const result = await booksCollection
+          .find(query)
+          .sort(sortQuery)
+          .toArray();
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ error: err.message });
+      }
     });
 
     // get 5  books from db
@@ -367,26 +386,6 @@ async function run() {
         deleteBook,
         deleteOrders,
       });
-    });
-
-    // search
-    app.get("/search", async (req, res) => {
-      const search = req.query.search || "";
-      const result = await booksCollection
-        .find({ name: { $regex: search, $options: "i" } })
-        .toArray();
-
-      res.send(result);
-    });
-
-    // sort
-    app.get("/sort", async (req, res) => {
-      const sort = req.query.sort;
-      const result = await booksCollection
-        .find()
-        .sort({ price: sort === "asc" ? 1 : -1 })
-        .toArray();
-      res.send(result);
     });
 
     // add review
