@@ -478,6 +478,16 @@ async function run() {
       }
     });
 
+    // when review show
+    app.get("/trogol-review/:id/:email", async (req, res) => {
+      const productId = req.params.id;
+      const email = req.params.email;
+      const result = await customerOrderCollection
+        .find({ productId, email })
+        .toArray();
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
