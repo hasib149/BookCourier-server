@@ -422,7 +422,7 @@ async function run() {
     });
 
     // wishlist---->post
-    app.post("/api/wishlist", async (req, res) => {
+    app.post("/api/wishlist", verifyJWT, async (req, res) => {
       const {
         useremail,
         bookId,
