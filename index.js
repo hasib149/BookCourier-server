@@ -20,7 +20,7 @@ app.use(
     origin: [
       "http://localhost:5173",
       "http://localhost:5174",
-      "https://b12-m11-session.web.app",
+      "https://assignment-11-8f135.web.app",
     ],
     credentials: true,
     optionSuccessStatus: 200,
@@ -62,8 +62,30 @@ async function run() {
     const reviewsCollection = db.collection("review");
     const wishlistCollection = db.collection("wishlist");
 
+    // role middlewares
+    const verifyADMIN = async (req, res, next) => {
+      const email = req.tokenEmail;
+      const user = await usersCollection.findOne({ email });
+      if (user?.role !== "admin")
+        return res
+          .status(403)
+          .send({ message: "Admin only Actions!", role: user?.role });
+
+      next();
+    };
+    const verifyLIBERIAN = async (req, res, next) => {
+      const email = req.tokenEmail;
+      const user = await usersCollection.findOne({ email });
+      if (user?.role !== "librarian")
+        return res
+          .status(403)
+          .send({ message: "Librarian only Actions!", role: user?.role });
+
+      next();
+    };
+
     // book added
-    app.post("/books", verifyJWT, async (req, res) => {
+    app.post("/books", verifyJWT, verifyLIBERIAN, async (req, res) => {
       const bookData = req.body;
       console.log(bookData);
       const result = await booksCollection.insertOne(bookData);
@@ -218,7 +240,7 @@ async function run() {
     });
 
     // my-books liberian
-    app.get("/my-books", verifyJWT, async (req, res) => {
+    app.get("/my-books", verifyJWT, verifyLIBERIAN, async (req, res) => {
       const result = await booksCollection
         .find({ "Librarian.email": req.tokenEmail })
         .toArray();
@@ -226,14 +248,19 @@ async function run() {
     });
 
     // my-books-status-update
-    app.patch("/status-update/:id", verifyJWT, async (req, res) => {
-      const id = new ObjectId(req.params.id);
-      const result = await booksCollection.updateOne(
-        { _id: id },
-        { $set: { status: "unpublished" } }
-      );
-      res.send(result);
-    });
+    app.patch(
+      "/status-update/:id",
+      verifyJWT,
+      verifyLIBERIAN,
+      async (req, res) => {
+        const id = new ObjectId(req.params.id);
+        const result = await booksCollection.updateOne(
+          { _id: id },
+          { $set: { status: "unpublished" } }
+        );
+        res.send(result);
+      }
+    );
 
     // get edited data for one products
     app.get("/editBooks/:id", verifyJWT, async (req, res) => {
@@ -243,7 +270,7 @@ async function run() {
     });
 
     // edit-book
-    app.put("/book-edit/:id", verifyJWT, async (req, res) => {
+    app.put("/book-edit/:id", verifyJWT, verifyLIBERIAN, async (req, res) => {
       const id = req.params.id;
       const updatedReview = req.body;
       const result = await booksCollection.updateOne(
@@ -254,7 +281,7 @@ async function run() {
     });
 
     // liberian all order data
-    app.get("/allOrders", verifyJWT, async (req, res) => {
+    app.get("/allOrders", verifyJWT, verifyLIBERIAN, async (req, res) => {
       const result = await customerOrderCollection
         .find({ "librarian.email": req.tokenEmail })
         .toArray();
@@ -262,25 +289,35 @@ async function run() {
     });
 
     //order calcel
-    app.patch("/orders/cancel/:id", verifyJWT, async (req, res) => {
-      const id = new ObjectId(req.params.id);
-      const result = await customerOrderCollection.updateOne(
-        { _id: id },
-        { $set: { order_status: "cancelled" } }
-      );
-      res.send(result);
-    });
+    app.patch(
+      "/orders/cancel/:id",
+      verifyJWT,
+      verifyLIBERIAN,
+      async (req, res) => {
+        const id = new ObjectId(req.params.id);
+        const result = await customerOrderCollection.updateOne(
+          { _id: id },
+          { $set: { order_status: "cancelled" } }
+        );
+        res.send(result);
+      }
+    );
 
     // order status cjhange
-    app.put("/orders/status/:id", verifyJWT, async (req, res) => {
-      const id = req.params.id;
-      const newStatus = req.body.status;
-      const result = await customerOrderCollection.updateOne(
-        { _id: new ObjectId(id) },
-        { $set: { order_status: newStatus } }
-      );
-      res.send(result);
-    });
+    app.put(
+      "/orders/status/:id",
+      verifyJWT,
+      verifyLIBERIAN,
+      async (req, res) => {
+        const id = req.params.id;
+        const newStatus = req.body.status;
+        const result = await customerOrderCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { order_status: newStatus } }
+        );
+        res.send(result);
+      }
+    );
 
     app.post("/user", async (req, res) => {
       const userData = req.body;
@@ -317,7 +354,7 @@ async function run() {
     });
 
     // get all user
-    app.get("/alluser", verifyJWT, async (req, res) => {
+    app.get("/alluser", verifyJWT, verifyADMIN, async (req, res) => {
       const result = await usersCollection
         .find({ email: { $ne: req.tokenEmail } })
         .toArray();
@@ -325,13 +362,13 @@ async function run() {
     });
 
     // all books for admin
-    app.get("/adminbooks", verifyJWT, async (req, res) => {
+    app.get("/adminbooks", verifyJWT, verifyADMIN, async (req, res) => {
       const result = await booksCollection.find().sort({ _id: -1 }).toArray();
       res.send(result);
     });
 
     // make user update--->liberian
-    app.patch("/userRole/:id", verifyJWT, async (req, res) => {
+    app.patch("/userRole/:id", verifyJWT,verifyADMIN, async (req, res) => {
       const id = new ObjectId(req.params.id);
       const result = await usersCollection.updateOne(
         { _id: id },
@@ -340,7 +377,7 @@ async function run() {
       res.send(result);
     });
     // make user update--->Admin
-    app.patch("/userRoles/:id", verifyJWT, async (req, res) => {
+    app.patch("/userRoles/:id", verifyJWT,verifyADMIN, async (req, res) => {
       const id = new ObjectId(req.params.id);
       const result = await usersCollection.updateOne(
         { _id: id },
@@ -350,7 +387,7 @@ async function run() {
     });
 
     // admin publish
-    app.patch("/userstatus/:id", verifyJWT, async (req, res) => {
+    app.patch("/userstatus/:id", verifyJWT,verifyADMIN, async (req, res) => {
       const id = new ObjectId(req.params.id);
       const result = await booksCollection.updateOne(
         { _id: id },
@@ -359,7 +396,7 @@ async function run() {
       res.send(result);
     });
     // admin unpublish
-    app.patch("/userstatusunpublish/:id", verifyJWT, async (req, res) => {
+    app.patch("/userstatusunpublish/:id", verifyJWT,verifyADMIN, async (req, res) => {
       const id = new ObjectId(req.params.id);
       const result = await booksCollection.updateOne(
         { _id: id },
@@ -369,7 +406,7 @@ async function run() {
     });
 
     // delete book and order
-    app.delete("/booksupdate/:id", verifyJWT, async (req, res, next) => {
+    app.delete("/booksupdate/:id", verifyJWT,verifyADMIN, async (req, res, next) => {
       const id = req.params.id;
 
       const deleteBook = await booksCollection.deleteOne({
